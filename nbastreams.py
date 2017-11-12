@@ -61,7 +61,7 @@ class Game:
                 game_text = 'FINAL ' + game_text
             return game_text
         else:
-            return '{} {} vs. {} {}'.format(self.ht.name, self.ht.record, self.at.record, self.at.name)
+            return '{} {} {} vs. {} {}'.format(self.time, self.ht.name, self.ht.record, self.at.record, self.at.name)
 
 
 def get_streams(team):
@@ -77,11 +77,9 @@ def get_streams(team):
                     # Only get streams from accounts that have been approved or verified by /r/NBAStreams
                     if flair == 'Verified Streamer' or flair == 'Approved Streamer':
                         for get_tag in comment.body_html.split('<'):
-                            if 'http' in get_tag:
+                            if 'http' in get_tag and 'prnt' not in get_tag:
                                 url = get_tag.split('"')[1]
-                                # Add the url for the stream to the list of streams
-                                if 'feed' in get_tag.lower() or 'stream' in get_tag.lower():
-                                    streams.append(url)
+                                streams.append(url)
     except IndexError:
         return
 
@@ -162,6 +160,7 @@ class Stream:
         else:
             for label in self.stream_labels:
                 label.grid_forget()
+            self.title_label.grid(row=0, column=1, padx=7, pady=7)
             self.back_button.grid_forget()
             self.show_games()
 
@@ -186,7 +185,7 @@ class Stream:
             # If there are games for that team going on then the urls will appear in blue
             # and when the user's mouse hovers over them the url will be underlined and their mouse will change
             label.configure(font=label_font, fg="blue", cursor="hand2")
-            label.bind("<Button-1>", lambda event, name=url: webbrowser.open(name))
+            label.bind("<Button-1>", lambda event, name=url: webbrowser.open_new(name))
             self.stream_labels.append(label)
             row += 1
 
