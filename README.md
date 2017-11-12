@@ -7,6 +7,7 @@ streams from the subreddit /r/nbastreams. Only streams from streamers that are v
 
 #### Still in development:
 * Team logo icons in the list of the games for the day
+* Also displaying the contents of the streams (ex: showing if the stream feed is from the home team or away team)
 * Improving the GUI
 * Possibly expanding to other sports/streams
 
