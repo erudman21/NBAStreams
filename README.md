@@ -5,8 +5,8 @@ Side project to help me learn Python and use PRAW (Python Reddit API Wrapper), a
 Displays clickable links for the NBA games of the current day. Once clicked, the window will change to a list of clickable
 streams from the subreddit /r/nbastreams. Only streams from streamers that are verified or approved by /r/nbastreams are shown.
 
-#### Still in development:
-<s>* Team logo icons in the list of the games for the day
+#### Still in development:<s>
+* Team logo icons in the list of the games for the day </s>
 * Also displaying the contents of the streams (ex: showing if the stream feed is from the home team or away team)
 * Improving the GUI
 * Possibly expanding to other sports/streams
