@@ -3,7 +3,8 @@ from tkinter import *
 from tkinter import font
 from bs4 import BeautifulSoup
 import webbrowser
-from urllib.request import urlopen
+from urllib.request import *
+import base64
 from info import username, password, client_id, client_secret, user_agent
 
 reddit = praw.Reddit(client_id=client_id.strip(),
@@ -26,10 +27,15 @@ Score's value will differ depending on whether the team's game:
     -Is over
 '''
 class Team:
-    def __init__(self, name, record, score):
+    def __init__(self, name, record, score, icon):
         self.name = name
         self.record = record
         self.score = score
+
+        # The parameter icon is the url to the team icon on the FOX website so it still has to be opened and encoded
+        # into base64 because that is the type of data that Python accepts
+        pic = urlopen(icon).read()
+        self.icon = base64.encodebytes(pic)
 
 
 # Game class - at is the away team and ht is the home team for the game
@@ -44,7 +50,7 @@ class Game:
         if 'ET' in self.time:
             return 0
         # Returns 2 if the game has ended
-        if '-' in self.time:
+        if 'FINAL' in self.time:
             return 2
         # Returns 1 if the game is currently going on
         else:
@@ -58,10 +64,10 @@ class Game:
         if state > 0:
             game_text = '{} {} | {} {}'.format(self.ht.name, self.ht.score, self.at.score, self.at.name)
             if state == 2:
-                game_text = 'FINAL ' + game_text
+                game_text = 'FINAL\n' + game_text
             return game_text
         else:
-            return '{} {} {} vs. {} {}'.format(self.time, self.ht.name, self.ht.record, self.at.record, self.at.name)
+            return '{}\n{} {} vs. {} {}'.format(self.time, self.ht.name, self.ht.record, self.at.record, self.at.name)
 
 
 def get_streams(team):
@@ -90,17 +96,23 @@ def get_streams(team):
 def get_name(html):
     return html.span.findAll('label')[1].text.strip() + ' ' + html.findAll('span')[1].text.strip()
 
+
 # Extracts the record of the team from the html in BeautifulSoup
 def get_record(html):
     return html.find('span', {'class': 'wisbb_teamRecord'}).text.strip()
+
 
 # Extracts the score of the team from the html in BeautifulSoup
 def get_score(html):
     return html.find('div', {'class': 'wisbb_score'}).text.strip()
 
+
 # Extracts the time of the game from the html in BeautifulSoup
 def get_time(html):
-    return html.findAll('span')[1].text
+    if html.find('span', {'class': 'wisbb_status'}).text == '':
+        return html.findAll('span', {'class': 'wisbb_status'})[1].text
+    return html.find('span', {'class': 'wisbb_status'}).text
+
 
 # Returns a list of Game objects, filled with the games scheduled for the current day
 def get_games():
@@ -108,17 +120,18 @@ def get_games():
 
     for game in todays_games.findAll('tr'):
         info = game.findAll('td')
-        at_info = info[0]
+        ht_info = info[0]
         time = info[1]
-        ht_info = info[2]
+        at_info = info[2]
 
-        away_team = Team(get_name(at_info), get_record(at_info), get_score(at_info))
-        home_team = Team(get_name(ht_info), get_record(ht_info), get_score(ht_info))
+        away_team = Team(get_name(at_info), get_record(at_info), get_score(at_info), at_info.img['src'])
+        home_team = Team(get_name(ht_info), get_record(ht_info), get_score(ht_info), ht_info.img['src'])
         # Create new Game objects for each game scheduled that day and add it to the list that is returned
         game = Game(get_time(time), away_team, home_team)
 
         list_games.append(game)
     return list_games
+
 
 # Class for Tkinter app
 class Stream:
@@ -135,20 +148,30 @@ class Stream:
         row = 1
         # For loop to show all of the games for the current day
         for game in get_games():
-            self.label = Label(root, text=game.format_game())
-            label_font = font.Font(self.label, self.label.cget("font"))
-            self.label.configure(font=label_font, fg="blue", cursor="hand2")
-            self.label.grid(row=row, column=1, padx=7, pady=7)
-
+            game_label = Label(root, text=game.format_game())
+            label_font = font.Font(game_label, game_label.cget("font"))
+            game_label.configure(font=label_font, fg="blue", cursor="hand2")
+            game_label.grid(row=row, column=1, padx=7, pady=7)
             # Bind the labels to open the streams for the game that was clicked
-            self.label.bind("<Button-1>", lambda event, name=game.ht.name: self.show_streams(name))
+            game_label.bind("<Button-1>", lambda event, name=game.ht.name: self.show_streams(name))
+            self.game_labels.append(game_label)
 
-            self.game_labels.append(self.label)
+            self.show_icon(game.ht, row, 0)
+            self.show_icon(game.at, row, 2)
+
             row += 1
 
     # Sets the title back to it's original state
     def set_title_back(self):
         self.title_label.config(text="Which game do you want to watch?", fg='black')
+
+    # Shows the icon for team at row row, and column col
+    def show_icon(self, team, row, col):
+        # Creates an image for the icon and shrinks it by 50%
+        icon = PhotoImage(data=team.icon).subsample(2, 2)
+        label = Label(root, image=icon)
+        label.image = icon
+        label.grid(row=row, column=col)
 
     # Hides or shows the games depending on what value boolean is
     def hide_games(self, boolean, team):
@@ -166,7 +189,7 @@ class Stream:
 
     # Iterate through the list returned by get_streams
     def show_streams(self, team):
-        row = 1
+        row = 2
         streams = get_streams(team)
 
         # If streams is empty the team isn't in a game
@@ -176,6 +199,8 @@ class Stream:
             return
 
         self.hide_games(0, None)
+        self.show_icon(team, 1, 0)
+
         # List the urls out and bind the left click to open the url
         for url in streams:
             label = Label(root, text=url)
