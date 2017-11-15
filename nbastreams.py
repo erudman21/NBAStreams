@@ -35,7 +35,10 @@ class Team:
         # The parameter icon is the url to the team icon on the FOX website so it still has to be opened and encoded
         # into base64 because that is the type of data that Python accepts
         pic = urlopen(icon).read()
-        self.icon = base64.encodebytes(pic)
+        b64 = base64.encodebytes(pic)
+        icon = PhotoImage(data=b64).subsample(2, 2)
+        self.icon = Label(root, image=icon)
+        self.icon.image = icon
 
 
 # Game class - at is the away team and ht is the home team for the game
@@ -62,12 +65,12 @@ class Game:
         state = self.game_state()
 
         if state > 0:
-            game_text = '{} {} | {} {}'.format(self.ht.name, self.ht.score, self.at.score, self.at.name)
+            game_text = '{} {} | {} {}'.format(self.at.name, self.at.score, self.ht.score, self.ht.name)
             if state == 2:
                 game_text = 'FINAL\n' + game_text
             return game_text
         else:
-            return '{}\n{} {} vs. {} {}'.format(self.time, self.ht.name, self.ht.record, self.at.record, self.at.name)
+            return '{}\n{} {} vs. {} {}'.format(self.time, self.at.name, self.at.record, self.ht.record, self.ht.name)
 
 
 def get_streams(team):
@@ -87,7 +90,8 @@ def get_streams(team):
                                 url = get_tag.split('"')[1]
                                 streams.append(url)
     except IndexError:
-        return
+        if not streams:
+            return
 
     return streams
 
@@ -120,9 +124,9 @@ def get_games():
 
     for game in todays_games.findAll('tr'):
         info = game.findAll('td')
-        ht_info = info[0]
+        at_info = info[0]
         time = info[1]
-        at_info = info[2]
+        ht_info = info[2]
 
         away_team = Team(get_name(at_info), get_record(at_info), get_score(at_info), at_info.img['src'])
         home_team = Team(get_name(ht_info), get_record(ht_info), get_score(ht_info), ht_info.img['src'])
@@ -139,8 +143,10 @@ class Stream:
         root.title("NBA Streams")
         self.title_label = Label(root, text="Which game do you want to watch?", font=50)
         self.title_label.grid(row=0, column=1, padx=7, pady=7)
+        self.game_label = Label(root, font=50)
         self.game_labels = []
         self.stream_labels = []
+        self.icons = []
         self.back_button = Button(root, text="<- Back to the games")
         self.show_games()
 
@@ -153,11 +159,13 @@ class Stream:
             game_label.configure(font=label_font, fg="blue", cursor="hand2")
             game_label.grid(row=row, column=1, padx=7, pady=7)
             # Bind the labels to open the streams for the game that was clicked
-            game_label.bind("<Button-1>", lambda event, name=game.ht.name: self.show_streams(name))
+            game_label.bind("<Button-1>", lambda event, game=game: self.show_streams(game))
             self.game_labels.append(game_label)
 
-            self.show_icon(game.ht, row, 0)
-            self.show_icon(game.at, row, 2)
+            game.at.icon.grid(row=row, column=0)
+            game.ht.icon.grid(row=row, column=2)
+            self.icons.append(game.ht.icon)
+            self.icons.append(game.at.icon)
 
             row += 1
 
@@ -172,25 +180,44 @@ class Stream:
         label = Label(root, image=icon)
         label.image = icon
         label.grid(row=row, column=col)
+        self.icons.append(label)
+
+    # Forgets all of the grids associated with the window showing the streams
+    def forget_stream_grids(self, game):
+        for label in self.stream_labels:
+            label.grid_forget()
+        self.game_label.grid_forget()
+        game.at.icon.grid_forget()
+        game.ht.icon.grid_forget()
+        self.back_button.grid_forget()
+
+    # Forgets all of the grids associated with the window showing the games
+    def forget_game_grids(self, game):
+        for label in self.game_labels:
+            label.grid_forget()
+        for icon in self.icons:
+            icon.grid_forget()
+        self.title_label.grid_forget()
 
     # Hides or shows the games depending on what value boolean is
-    def hide_games(self, boolean, team):
-        # If boolean is 0 then re-show the games, otherwise hide them
+    # If boolean is 0, it hides all of the games except for the one the user clicked on
+    def hide_games(self, boolean, game):
+        # If boolean is 0 then show the streams, otherwise hide the streams and show the games again
         if boolean == 0:
-            for label in self.game_labels:
-                label.grid_forget()
-            self.title_label.grid_forget()
+            self.forget_game_grids(game)
+            self.game_label.config(text=game.format_game(), font=30, fg='red')
+            self.game_label.grid(row=0, column=1)
+            game.at.icon.grid(row=0, column=0)
+            game.ht.icon.grid(row=0, column=2)
         else:
-            for label in self.stream_labels:
-                label.grid_forget()
+            self.forget_stream_grids(game)
             self.title_label.grid(row=0, column=1, padx=7, pady=7)
-            self.back_button.grid_forget()
             self.show_games()
 
     # Iterate through the list returned by get_streams
-    def show_streams(self, team):
-        row = 2
-        streams = get_streams(team)
+    def show_streams(self, game):
+        row = 1
+        streams = get_streams(game.ht.name)
 
         # If streams is empty the team isn't in a game
         if not streams:
@@ -198,13 +225,18 @@ class Stream:
             self.title_label.after(1600, self.set_title_back)
             return
 
-        self.hide_games(0, None)
-        self.show_icon(team, 1, 0)
+        # If the game is 2 then the game is over
+        if game.game_state() == 2:
+            self.title_label.config(text="That game is already over!", fg='red', font=20)
+            self.title_label.after(1600, self.set_title_back)
+            return
+
+        self.hide_games(0, game)
 
         # List the urls out and bind the left click to open the url
         for url in streams:
             label = Label(root, text=url)
-            label.grid(row=row, column=0, padx=7, pady=7)
+            label.grid(row=row, column=1, padx=7, pady=7)
             label_font = font.Font(label, label.cget("font"))
 
             # If there are games for that team going on then the urls will appear in blue
@@ -214,8 +246,8 @@ class Stream:
             self.stream_labels.append(label)
             row += 1
 
-        self.back_button.bind("<ButtonRelease-1>", lambda event: self.hide_games(1, team))
-        self.back_button.grid(row=0, column=0)
+        self.back_button.bind("<ButtonRelease-1>", lambda event: self.hide_games(1, game))
+        self.back_button.grid(row=row, column=1, padx=7, pady=7)
 
 
 root = Tk()
