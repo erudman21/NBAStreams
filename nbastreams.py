@@ -144,9 +144,7 @@ class Stream:
         self.title_label = Label(root, text="Which game do you want to watch?", font=50)
         self.title_label.grid(row=0, column=1, padx=7, pady=7)
         self.game_label = Label(root, font=50)
-        self.game_labels = []
-        self.stream_labels = []
-        self.icons = []
+        self.game_labels = self.stream_labels = self.icons = []
         self.back_button = Button(root, text="<- Back to the games")
         self.show_games()
 
@@ -164,8 +162,7 @@ class Stream:
 
             game.at.icon.grid(row=row, column=0)
             game.ht.icon.grid(row=row, column=2)
-            self.icons.append(game.ht.icon)
-            self.icons.append(game.at.icon)
+            self.icons.extend((game.ht.icon, game.at.icon))
 
             row += 1
 
