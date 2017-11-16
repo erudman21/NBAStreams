@@ -11,7 +11,7 @@ Current state of the GUI:
 
 Example of the list of streams for a game that was clicked:
 
-![screenshot 3](https://user-images.githubusercontent.com/26533234/32869073-1a7a9ef8-ca43-11e7-8384-950e33cd8cb8.png)
+![screenshot 3](https://user-images.githubusercontent.com/26533234/32869122-544fe17e-ca43-11e7-90ed-94e10444a746.png)
 
 #### Still in development:<s>
 * Team logo icons in the list of the games for the day </s>
