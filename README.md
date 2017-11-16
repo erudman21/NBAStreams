@@ -9,6 +9,10 @@ Current state of the GUI:
 
 ![nbastreams](https://user-images.githubusercontent.com/26533234/32802957-f2c24a94-c94f-11e7-83ec-02423f63d75c.png)
 
+Example of the list of streams for a game that was clicked:
+
+![screenshot 3](https://user-images.githubusercontent.com/26533234/32869073-1a7a9ef8-ca43-11e7-8384-950e33cd8cb8.png)
+
 #### Still in development:<s>
 * Team logo icons in the list of the games for the day </s>
 * Also displaying the contents of the streams (ex: showing if the stream feed is from the home team or away team)
