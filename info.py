@@ -1,5 +1,0 @@
-client_id='yLvZDv5XtmSZzg'
-client_secret='w2IxfJIkHJCvdRS9Mu4byWe9KNE'
-username='Namdur21'
-password='Lincecum21!'
-user_agent='nbastreams script by Namdur21'
